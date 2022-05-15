@@ -40,22 +40,30 @@ def binary_string_to_int(bin_str):
 shortest_programs = {}
 
 def put_output_in_table(output, my_input):
+    if len(output) > len(my_input):
+        print("--- We have compressed something! ---")
     if output not in shortest_programs:
         shortest_programs[output] = my_input
     else:
         shortest_programs[output] = min(my_input, shortest_programs[output])
 
-# Each value is a pair (my_input, proc)
+# Each value is a tuple: (
+#     my_input, a string representing the program binary
+#     proc, a subprocess.Popen instance
+#     n, number of times the proc has been tried
+# )
 running_procs = []
 
 try:
     i = 0
     while True:
-        for j, (my_input, proc) in enumerate(running_procs):
+        for j, (my_input, proc, runs) in enumerate(running_procs):
             try:
-                print(f"Trying {my_input}")
+                runs += 1
+                running_procs[j] = (my_input, proc, runs)
+                print(f"Trying {my_input} run {runs}")
                 os.kill(proc.pid, signal.SIGCONT)
-                proc.wait(timeout=1)
+                proc.wait(timeout=1/runs)
                 outs, errs = proc.communicate()
 
                 if errs:
@@ -65,16 +73,18 @@ try:
                     try:
                         output = output_bytes.decode("ascii")
                         assert all(char in ['0', '1'] for char in output)
-                        print(f"Inserting into the table:")
+                        print(f"Inserting into the table after run {runs}:")
+                        if runs > 1:
+                            print("--- This is more than one run! ---")
                         print(f"{output} -> {my_input}")
                         put_output_in_table(output, my_input)
                     except ValueError:
-                        print(f"Ignoring program {my_input} which output the following value:")
+                        print(f"Ignoring program {my_input} run {runs} which output the following value:")
                         print(output_bytes)
                     except AssertionError:
-                        print(f"Ignoring program {my_input} because it output non-binary:")
+                        print(f"Ignoring program {my_input} run {runs} because it output non-binary:")
                         print(output_bytes)
-                    print(f"Done with {my_input}")
+                    print(f"Done with {my_input} run {runs}")
                     running_procs.pop(j)
             except subprocess.TimeoutExpired:
                 os.kill(proc.pid, signal.SIGSTOP)
@@ -88,8 +98,8 @@ try:
             stderr=subprocess.PIPE,
         )
         os.kill(proc.pid, signal.SIGSTOP)
-        running_procs.append((my_input, proc))
+        running_procs.append((my_input, proc, 0))
         i += 1
 except KeyboardInterrupt:
-    [proc.kill() for (_, proc) in running_procs]
+    [proc.kill() for (_, proc, _) in running_procs]
     print(shortest_programs)
