@@ -5,9 +5,10 @@ import time
 
 
 def utm(my_input):
+    return "python3 -u u_fifteen_two.py " + my_input
     # return "python3 -u tester.py " + my_input
     # Perl script from https://github.com/tromp/AIT/blob/642452f9/blc.pl
-    return "echo " + my_input + " | perl AIT/blc.pl -b"
+    # return "echo " + my_input + " | perl AIT/blc.pl -b"
 
 
 def int_to_binary_string(integer):
